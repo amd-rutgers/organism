@@ -1,3 +1,18 @@
+/**
+ * NOTE: this requires the leap motion library to be installed.
+ * If you haven't already done this, go to
+ * Sketch -> Import Library -> Add Library..
+ * and search for "Leap Motion"
+ *
+ * You can find information about the library here:
+ * https://github.com/nok/leap-motion-processing
+ * (the examples are good to look at)
+ */
+import de.voidplus.leapmotion.*;
+
+// declare a LeapMotion object
+LeapMotion leap;
+// set default circle size
 float circleSize = 100;
 // create global variables to
 // track organism position
@@ -8,6 +23,10 @@ color bgColor;
 void setup() {
   size(500, 500);
   smooth();
+  
+  // initialize new leap motion tracker
+  // and allow gestures
+  leap = new LeapMotion(this).allowGestures();
 
   orgX = mouseX;
   orgY = mouseY;
@@ -22,42 +41,50 @@ void setup() {
 }
 
 void draw() {
-  // set bg color on every frame
   background(bgColor);
   
-  // every frame each coordinate
-  // will move 1/10th closer to
-  // the current mouse position
-  // (this creates an easing effect)
-  orgX = orgX + (mouseX-orgX)/10;
-  orgY = orgY + (mouseY-orgY)/10;
+  // get an array of all hands 
+  // https://processing.org/reference/ArrayList.html
+  ArrayList<Hand> hands = leap.getHands();
   
-  // draw the organism using the
-  // coordinates
-  drawOrganism(orgX, orgY);
+  // if there are any hands found
+  if(hands.size() > 0) {
+    
+    // only take first hand
+    Hand hand = hands.get(0);
+    
+    // get hand position
+    PVector handPosition = hand.getPosition();
+    // get hand roll
+    float roll = hand.getRoll();
+    
+    // now use handPosition instead of mouseX, mouseY
+    orgX = orgX + (handPosition.x-orgX)/10;
+    orgY = orgY + (handPosition.y-orgY)/10;
+    
+    // draw the organism
+    drawOrganism(orgX, orgY, roll);
+  }
+
 }
 
 /**
- * The `keyPressed` function will only be run
- * when a key on the keyboard is pressed
+ * Use circleSizele gesture to change colors
  */
-void keyPressed() {
-  // set background to a different
-  // random color
-  bgColor = color(
-    random(230, 255),
-    random(230, 255),
-    random(230, 255)
-  );
+void leapOnCircleGesture(CircleGesture g, int state){
+ // only change when gesture stops
+  if(state == 3) {
+    bgColor = color(random(255), random(255), random(255));
+  }
 }
-
 
 /**
  * drawOrganism function
  * draws the organism on the screen based
- * on given x and y coordinates
+ * on given x and y coordinates and roll
+ * for rotation
  */
-void drawOrganism(float x, float y) {
+void drawOrganism(float x, float y, float roll) {
 
   // convert frame count from
   // degrees to radians
@@ -78,14 +105,16 @@ void drawOrganism(float x, float y) {
   translate(x, y);
   // scale based on the scale value
   scale(scale);
-  // now rotate based on the frameCount
-  rotate(angle);
+  
+  // now rotation is based on roll
+  // variable passed into function
+  rotate(radians(roll));
   
   // set style settings
   noStroke();
   fill(200, 234, noise(f, x, y)*189, 100);
   
-  // draw main circle
+  // draw main circleSizele
   ellipse(0, 0, circleSize, circleSize);
   
   // offset 50 px on both axis 
